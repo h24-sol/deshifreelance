@@ -13,7 +13,7 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
 
   <!-- Navigation Bar -->
-  <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
+  <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         <div class="flex items-center space-x-3">
@@ -21,9 +21,10 @@
           <span class="text-xl font-bold tracking-tight text-white">Deshi<span class="text-emerald-400">Freelance</span></span>
         </div>
         
-        <div id="nav-user" class="hidden flex items-center space-x-4">
+        <div id="nav-user" class="hidden flex items-center space-x-3">
           <span id="user-display" class="text-sm font-medium text-gray-300"></span>
-          <span id="user-balance" class="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">৳ 0 BDT</span>
+          <span id="user-balance" class="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-500/20">৳ 0 BDT</span>
+          <button onclick="openWithdrawModal()" class="text-xs bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold px-3 py-1.5 rounded-lg transition">💸 Withdraw</button>
           <button onclick="logout()" class="text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-md transition">Logout</button>
         </div>
       </div>
@@ -40,10 +41,8 @@
         <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 pb-3 font-semibold text-gray-400 border-b-2 border-transparent text-center">Register</button>
       </div>
 
-      <!-- Alert Banner -->
       <div id="auth-alert" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
 
-      <!-- Form -->
       <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
         <div id="name-field" class="hidden">
           <label class="block text-xs font-semibold text-gray-400 mb-1">Full Name</label>
@@ -108,13 +107,60 @@
           <button onclick="loadTasks()" class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">🔄 Refresh List</button>
         </div>
 
-        <div id="task-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-          <!-- Task cards rendered dynamically -->
-        </div>
+        <div id="task-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full"></div>
       </div>
     </div>
 
   </main>
+
+  <!-- Withdrawal Pop-up Modal -->
+  <div id="withdraw-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 border border-gray-700 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-white">Withdraw Earnings</h3>
+        <button onclick="closeWithdrawModal()" class="text-gray-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <form onsubmit="handleWithdrawSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Payment Method</label>
+          <select id="w-method" onchange="toggleBankFields()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500">
+            <option value="bKash">bKash (Personal)</option>
+            <option value="Nagad">Nagad (Personal)</option>
+            <option value="Rocket">Rocket (Personal)</option>
+            <option value="Bank">Bank Transfer (Bangladesh Local)</option>
+          </select>
+        </div>
+
+        <div>
+          <label id="w-acc-label" class="block text-xs font-semibold text-gray-400 mb-1">bKash Mobile Number</label>
+          <input type="text" id="w-account" required placeholder="017XXXXXXXX" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div id="bank-fields" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Bank Name</label>
+            <input type="text" id="w-bank-name" placeholder="e.g. Dutch-Bangla Bank, Islami Bank" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Branch Name & Routing No.</label>
+            <input type="text" id="w-bank-branch" placeholder="e.g. Mirpur Branch (Routing: 090...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Account Holder Name</label>
+            <input type="text" id="w-bank-holder" placeholder="Exact Account Name" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Withdrawal Amount (BDT ৳)</label>
+          <input type="number" id="w-amount" min="50" required placeholder="Min ৳50 BDT" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-2.5 rounded-lg transition mt-4">Confirm Request</button>
+      </form>
+    </div>
+  </div>
 
   <script>
     const API_BASE = window.location.origin + '/api';
@@ -123,9 +169,7 @@
     let user = JSON.parse(localStorage.getItem('df_user')) || null;
 
     document.addEventListener('DOMContentLoaded', () => {
-      if (token && user) {
-        showDashboard();
-      }
+      if (token && user) showDashboard();
     });
 
     function switchAuthTab(mode) {
@@ -309,6 +353,65 @@
 
         alert('Proof submitted successfully!');
         proofInput.value = '';
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // --- WITHDRAWAL SYSTEM MODAL HANDLERS ---
+    function openWithdrawModal() {
+      document.getElementById('withdraw-modal').classList.remove('hidden');
+    }
+
+    function closeWithdrawModal() {
+      document.getElementById('withdraw-modal').classList.add('hidden');
+    }
+
+    function toggleBankFields() {
+      const method = document.getElementById('w-method').value;
+      const label = document.getElementById('w-acc-label');
+      const bankFields = document.getElementById('bank-fields');
+
+      if (method === 'Bank') {
+        label.innerText = 'Bank Account Number';
+        bankFields.classList.remove('hidden');
+      } else {
+        label.innerText = `${method} Mobile Number`;
+        bankFields.classList.add('hidden');
+      }
+    }
+
+    async function handleWithdrawSubmit(e) {
+      e.preventDefault();
+      const method = document.getElementById('w-method').value;
+      const accountNumber = document.getElementById('w-account').value;
+      const amountBDT = Number(document.getElementById('w-amount').value);
+
+      const bankDetails = method === 'Bank' ? {
+        bankName: document.getElementById('w-bank-name').value,
+        branch: document.getElementById('w-bank-branch').value,
+        holderName: document.getElementById('w-bank-holder').value
+      } : null;
+
+      try {
+        const res = await fetch(`${API_BASE}/withdraw`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            'x-auth-token': token
+          },
+          body: JSON.stringify({ method, accountNumber, amountBDT, bankDetails })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Withdrawal failed');
+
+        alert(data.message);
+        user.balanceBDT = data.newBalance;
+        localStorage.setItem('df_user', JSON.stringify(user));
+        document.getElementById('user-balance').innerText = `৳ ${user.balanceBDT} BDT`;
+        closeWithdrawModal();
       } catch (err) {
         alert(err.message);
       }
