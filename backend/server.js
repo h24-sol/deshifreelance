@@ -1,12 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
-const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 
@@ -20,22 +18,16 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB Atlas Connected Successfully'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// API Routes
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'API Online', message: 'DeshiFreelance API Running' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
-app.use('/api/payments', paymentRoutes);
 
-// Serve Frontend Static Files
-const frontendBuildPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendBuildPath));
-
-// Catch-all route to handle React Router client-side routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(200).send('Backend API Running. Frontend build in progress.');
-    }
-  });
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
 app.listen(PORT, () => {
