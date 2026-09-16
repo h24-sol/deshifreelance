@@ -1,8 +1,14 @@
 {
-  "name": "deshifreelance-monorepo",
+  "name": "backend",
   "version": "1.0.0",
+  "main": "server.js",
   "scripts": {
-    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend",
-    "start": "node backend/server.js"
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.3.1"
   }
 }
