@@ -31,7 +31,7 @@
   </nav>
 
   <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
 
     <!-- Auth View (Login / Register) -->
     <div id="auth-section" class="max-w-md mx-auto bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-xl">
@@ -108,7 +108,7 @@
           <button onclick="loadTasks()" class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">🔄 Refresh List</button>
         </div>
 
-        <div id="task-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="task-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
           <!-- Task cards rendered dynamically -->
         </div>
       </div>
@@ -211,7 +211,7 @@
     function formatTaskDescription(text) {
       const urlRegex = /(https?:\/\/[^\s]+)/g;
       return text.replace(urlRegex, (url) => {
-        return `<div class="my-3"><a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-500/30 transition">Open Link 🔗</a></div>`;
+        return `<div class="my-3"><a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-3 py-2 rounded-lg border border-emerald-500/30 transition break-all">Open Link 🔗</a></div>`;
       });
     }
 
@@ -229,20 +229,20 @@
         }
 
         grid.innerHTML = tasks.map(task => `
-          <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col justify-between hover:border-gray-600 transition shadow-lg">
-            <div>
-              <div class="flex items-start justify-between mb-3">
-                <h3 class="font-bold text-lg text-white">${task.title}</h3>
-                <span class="bg-emerald-500/10 text-emerald-400 font-bold text-sm px-3 py-1 rounded-full border border-emerald-500/20">৳${task.rewardBDT} BDT</span>
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col justify-between hover:border-gray-600 transition shadow-lg w-full max-w-full overflow-hidden">
+            <div class="w-full">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <h3 class="font-bold text-lg text-white break-words flex-1 min-w-0">${task.title}</h3>
+                <span class="bg-emerald-500/10 text-emerald-400 font-bold text-sm px-3 py-1 rounded-full border border-emerald-500/20 shrink-0">৳${task.rewardBDT} BDT</span>
               </div>
-              <div class="text-gray-400 text-sm mb-4 leading-relaxed">${formatTaskDescription(task.description)}</div>
+              <div class="text-gray-400 text-sm mb-4 leading-relaxed break-words max-w-full overflow-hidden">${formatTaskDescription(task.description)}</div>
               <div class="text-xs text-gray-500 mb-4">
                 <span>Employer: ${task.employer ? task.employer.name : 'Unknown'}</span>
               </div>
             </div>
 
             ${user && user.role === 'worker' ? `
-              <div class="border-t border-gray-700 pt-4 mt-2">
+              <div class="border-t border-gray-700 pt-4 mt-2 w-full">
                 <input type="text" id="proof-${task._id}" placeholder="Enter proof (URL, Code, Username)..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white mb-2 focus:outline-none focus:border-emerald-500">
                 <button onclick="submitProof('${task._id}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 text-xs font-bold py-2 rounded-lg transition">Submit Proof</button>
               </div>
@@ -268,7 +268,8 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            'x-auth-token': token
           },
           body: JSON.stringify(payload)
         });
@@ -298,7 +299,8 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            'x-auth-token': token
           },
           body: JSON.stringify({ proofText })
         });
