@@ -19,7 +19,7 @@ mongoose.connect(MONGO_URI)
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
 app.get('/', (req, res) => {
-  res.status(200).json({ status: 'API Online', message: 'DeshiFreelance API Running' });
+  res.status(200).json({ status: 'API Online', message: 'DeshiFreelance Core Engine Running' });
 });
 
 app.use('/api/auth', authRoutes);
