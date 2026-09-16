@@ -28,6 +28,8 @@ const taskSchema = new mongoose.Schema({
   description: String,
   rewardBDT: Number,
   workersNeeded: Number,
+  sourcePlatform: { type: String, default: 'Direct' },
+  externalUrl: { type: String, default: '' },
   employer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });
@@ -58,9 +60,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// --- AUTHENTICATION ROUTES ---
-
-// Register User
+// --- AUTH ROUTES ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -76,7 +76,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login User
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -101,8 +100,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- MICROTASK & WITHDRAWAL ROUTES ---
-
+// --- TASK & IMPORT ROUTES ---
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.find().populate('employer', 'name');
@@ -117,6 +115,35 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
     const task = new Task({ ...req.body, employer: req.user.id });
     await task.save();
     res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// NEW: External Job Import Route (Fiverr, Upwork, Social Media)
+app.post('/api/tasks/import', authMiddleware, async (req, res) => {
+  try {
+    const { externalUrl, customTitle, rewardBDT, workersNeeded, instructions } = req.body;
+
+    let detectedPlatform = 'External Job';
+    if (externalUrl.includes('fiverr.com')) detectedPlatform = 'Fiverr Gig';
+    else if (externalUrl.includes('upwork.com')) detectedPlatform = 'Upwork Task';
+    else if (externalUrl.includes('youtube.com') || externalUrl.includes('youtu.be')) detectedPlatform = 'YouTube Promotion';
+
+    const fullDescription = `${instructions}\n\nTask Target URL: ${externalUrl}`;
+
+    const importedTask = new Task({
+      title: `[${detectedPlatform}] ${customTitle}`,
+      description: fullDescription,
+      rewardBDT,
+      workersNeeded,
+      sourcePlatform: detectedPlatform,
+      externalUrl,
+      employer: req.user.id
+    });
+
+    await importedTask.save();
+    res.json({ message: 'External job imported and published successfully!', task: importedTask });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -148,7 +175,7 @@ app.post('/api/withdraw', authMiddleware, async (req, res) => {
   }
 });
 
-// --- STATIC FILE SERVING & FALLBACK ROUTE ---
+// --- STATIC FILE SERVING & FALLBACK ---
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
@@ -158,6 +185,5 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
