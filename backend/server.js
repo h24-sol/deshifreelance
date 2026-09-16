@@ -8,8 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- MONGODB CONNECTION ---
-// IMPORTANT: Make sure to replace <db_password> with your actual MongoDB database password!
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://manisprogrammer_db_user:<db_password>@deshifreelance-db.6oigaje.mongodb.net/deshifreelance?appName=deshifreelance-db&retryWrites=true&w=majority";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://manisprogrammer_db_user:hAqEq75wcBThEnHC@deshifreelance-db.6oigaje.mongodb.net/deshifreelance?appName=deshifreelance-db&retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB Connected Successfully!'))
