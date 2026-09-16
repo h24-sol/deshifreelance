@@ -7,7 +7,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- Database Schemas & Models ---
+// --- MONGODB CONNECTION ---
+// IMPORTANT: Make sure to replace <db_password> with your actual MongoDB database password!
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://manisprogrammer_db_user:<db_password>@deshifreelance-db.6oigaje.mongodb.net/deshifreelance?appName=deshifreelance-db&retryWrites=true&w=majority";
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Connected Successfully!'))
+  .catch((err) => console.error('MongoDB Connection Error:', err));
+
+// --- SCHEMAS & MODELS ---
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true, required: true },
@@ -39,7 +47,7 @@ const User = mongoose.model('User', userSchema);
 const Task = mongoose.model('Task', taskSchema);
 const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
 
-// --- Auth Middleware ---
+// --- AUTH MIDDLEWARE ---
 const authMiddleware = (req, res, next) => {
   const token = req.headers['x-auth-token'] || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
   if (!token) return res.status(401).json({ message: 'No authentication token provided.' });
@@ -76,7 +84,6 @@ app.post('/api/auth/login', async (req, res) => {
     const user = await User.findOne({ email, password });
     if (!user) return res.status(400).json({ message: 'Invalid email or password.' });
 
-    // Simple JWT-like string payload for quick testing
     const payload = JSON.stringify({ id: user._id, role: user.role });
     const token = 'header.' + Buffer.from(payload).toString('base64') + '.signature';
 
@@ -142,7 +149,7 @@ app.post('/api/withdraw', authMiddleware, async (req, res) => {
   }
 });
 
-// --- STATIC FILE SERVING & CATCH-ALL ROUTE ---
+// --- STATIC FILE SERVING & FALLBACK ROUTE ---
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
