@@ -1,30 +1,322 @@
-async function submitProof(taskId) {
-  const proofInput = document.getElementById(`proof-${taskId}`);
-  const proofText = proofInput.value.trim();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeshiFreelance - Microtask Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
 
-  if (!proofText) {
-    alert('Please enter your proof before submitting.');
-    return;
-  }
+  <!-- Navigation Bar -->
+  <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-gray-900 text-xl">DF</div>
+          <span class="text-xl font-bold tracking-tight text-white">Deshi<span class="text-emerald-400">Freelance</span></span>
+        </div>
+        
+        <div id="nav-user" class="hidden flex items-center space-x-4">
+          <span id="user-display" class="text-sm font-medium text-gray-300"></span>
+          <span id="user-balance" class="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">৳ 0 BDT</span>
+          <button onclick="logout()" class="text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-md transition">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-  try {
-    const res = await fetch(`https://deshifreelance.onrender.com/api/tasks/${taskId}/submit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-token': localStorage.getItem('token')
-      },
-      body: JSON.stringify({ proof: proofText })
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+
+    <!-- Auth View (Login / Register) -->
+    <div id="auth-section" class="max-w-md mx-auto bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-xl">
+      <div class="flex border-b border-gray-700 mb-6">
+        <button id="tab-login" onclick="switchAuthTab('login')" class="flex-1 pb-3 font-semibold text-emerald-400 border-b-2 border-emerald-400 text-center">Login</button>
+        <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 pb-3 font-semibold text-gray-400 border-b-2 border-transparent text-center">Register</button>
+      </div>
+
+      <!-- Alert Banner -->
+      <div id="auth-alert" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+      <!-- Form -->
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div id="name-field" class="hidden">
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Full Name</label>
+          <input type="text" id="auth-name" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" placeholder="e.g. Tanvir Hasan">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Email Address</label>
+          <input type="email" id="auth-email" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" placeholder="name@domain.com">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Password</label>
+          <input type="password" id="auth-password" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+        </div>
+
+        <div id="role-field" class="hidden">
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Account Role</label>
+          <select id="auth-role" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500">
+            <option value="worker">Microtask Worker</option>
+            <option value="employer">Employer / Job Creator</option>
+          </select>
+        </div>
+
+        <button type="submit" id="auth-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-2.5 rounded-lg transition">Log In</button>
+      </form>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboard-section" class="hidden space-y-8">
+
+      <!-- Action Panel for Employers -->
+      <div id="employer-controls" class="hidden bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-md">
+        <h2 class="text-xl font-bold text-white mb-4">Post a New Microtask</h2>
+        <form onsubmit="handleCreateTask(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Task Title</label>
+            <input type="text" id="task-title" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="e.g. Subscribe to YouTube Channel">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Reward (BDT ৳)</label>
+            <input type="number" id="task-reward" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="25">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Workers Needed</label>
+            <input type="number" id="task-workers" value="5" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Task Instructions</label>
+            <textarea id="task-desc" required rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="Provide step-by-step instructions and links..."></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold px-6 py-2.5 rounded-lg transition">Publish Task</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Task Feed -->
+      <div>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-white">Available Microtasks</h2>
+          <button onclick="loadTasks()" class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">🔄 Refresh List</button>
+        </div>
+
+        <div id="task-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Task cards rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin + '/api';
+    let authMode = 'login';
+    let token = localStorage.getItem('df_token') || null;
+    let user = JSON.parse(localStorage.getItem('df_user')) || null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (token && user) {
+        showDashboard();
+      }
     });
 
-    const data = await res.json();
-    if (res.ok) {
-      alert('Proof submitted successfully! Awaiting employer approval.');
-      proofInput.value = '';
-    } else {
-      alert(data.message || 'Failed to submit proof.');
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const loginTab = document.getElementById('tab-login');
+      const regTab = document.getElementById('tab-register');
+      const nameField = document.getElementById('name-field');
+      const roleField = document.getElementById('role-field');
+      const authBtn = document.getElementById('auth-btn');
+
+      if (mode === 'register') {
+        regTab.className = "flex-1 pb-3 font-semibold text-emerald-400 border-b-2 border-emerald-400 text-center";
+        loginTab.className = "flex-1 pb-3 font-semibold text-gray-400 border-b-2 border-transparent text-center";
+        nameField.classList.remove('hidden');
+        roleField.classList.remove('hidden');
+        authBtn.innerText = 'Create Account';
+      } else {
+        loginTab.className = "flex-1 pb-3 font-semibold text-emerald-400 border-b-2 border-emerald-400 text-center";
+        regTab.className = "flex-1 pb-3 font-semibold text-gray-400 border-b-2 border-transparent text-center";
+        nameField.classList.add('hidden');
+        roleField.classList.add('hidden');
+        authBtn.innerText = 'Log In';
+      }
     }
-  } catch (err) {
-    alert('Error submitting proof. Check console for details.');
-  }
-}
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      const alertBox = document.getElementById('auth-alert');
+
+      const endpoint = authMode === 'register' ? '/auth/register' : '/auth/login';
+      const payload = authMode === 'register' ? {
+        name: document.getElementById('auth-name').value,
+        email,
+        password,
+        role: document.getElementById('auth-role').value
+      } : { email, password };
+
+      try {
+        const res = await fetch(API_BASE + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || 'Authentication failed');
+
+        if (authMode === 'register') {
+          alertBox.className = "mb-4 p-3 rounded-lg text-sm bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+          alertBox.innerText = "Registration successful! Please log in.";
+          alertBox.classList.remove('hidden');
+          switchAuthTab('login');
+        } else {
+          token = data.token;
+          user = data.user;
+          localStorage.setItem('df_token', token);
+          localStorage.setItem('df_user', JSON.stringify(user));
+          showDashboard();
+        }
+      } catch (err) {
+        alertBox.className = "mb-4 p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30";
+        alertBox.innerText = err.message;
+        alertBox.classList.remove('hidden');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('auth-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.remove('hidden');
+      document.getElementById('nav-user').classList.remove('hidden');
+      document.getElementById('user-display').innerText = `${user.name} (${user.role})`;
+      document.getElementById('user-balance').innerText = `৳ ${user.balanceBDT || 0} BDT`;
+
+      if (user.role === 'employer') {
+        document.getElementById('employer-controls').classList.remove('hidden');
+      }
+
+      loadTasks();
+    }
+
+    function formatTaskDescription(text) {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRegex, (url) => {
+        return `<div class="my-3"><a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-500/30 transition">Open Link 🔗</a></div>`;
+      });
+    }
+
+    async function loadTasks() {
+      const grid = document.getElementById('task-grid');
+      grid.innerHTML = '<p class="text-gray-400 col-span-full text-center py-8">Loading available tasks...</p>';
+
+      try {
+        const res = await fetch(API_BASE + '/tasks');
+        const tasks = await res.json();
+
+        if (!tasks.length) {
+          grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">No active tasks available right now.</p>';
+          return;
+        }
+
+        grid.innerHTML = tasks.map(task => `
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col justify-between hover:border-gray-600 transition shadow-lg">
+            <div>
+              <div class="flex items-start justify-between mb-3">
+                <h3 class="font-bold text-lg text-white">${task.title}</h3>
+                <span class="bg-emerald-500/10 text-emerald-400 font-bold text-sm px-3 py-1 rounded-full border border-emerald-500/20">৳${task.rewardBDT} BDT</span>
+              </div>
+              <div class="text-gray-400 text-sm mb-4 leading-relaxed">${formatTaskDescription(task.description)}</div>
+              <div class="text-xs text-gray-500 mb-4">
+                <span>Employer: ${task.employer ? task.employer.name : 'Unknown'}</span>
+              </div>
+            </div>
+
+            ${user && user.role === 'worker' ? `
+              <div class="border-t border-gray-700 pt-4 mt-2">
+                <input type="text" id="proof-${task._id}" placeholder="Enter proof (URL, Code, Username)..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white mb-2 focus:outline-none focus:border-emerald-500">
+                <button onclick="submitProof('${task._id}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 text-xs font-bold py-2 rounded-lg transition">Submit Proof</button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<p class="text-red-400 col-span-full text-center py-8">Error loading tasks: ${err.message}</p>`;
+      }
+    }
+
+    async function handleCreateTask(e) {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('task-title').value,
+        rewardBDT: Number(document.getElementById('task-reward').value),
+        workersNeeded: Number(document.getElementById('task-workers').value),
+        description: document.getElementById('task-desc').value
+      };
+
+      try {
+        const res = await fetch(API_BASE + '/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to create task');
+
+        alert('Task posted successfully!');
+        document.getElementById('task-title').value = '';
+        document.getElementById('task-reward').value = '';
+        document.getElementById('task-desc').value = '';
+        loadTasks();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function submitProof(taskId) {
+      const proofInput = document.getElementById(`proof-${taskId}`);
+      const proofText = proofInput.value.trim();
+
+      if (!proofText) {
+        alert('Please enter proof details before submitting!');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/tasks/${taskId}/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ proofText })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Submission failed');
+
+        alert('Proof submitted successfully!');
+        proofInput.value = '';
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('df_token');
+      localStorage.removeItem('df_user');
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
