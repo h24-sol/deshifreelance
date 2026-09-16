@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
+const taskRoutes = require('./routes/tasks');
 
 const app = express();
 app.use(express.json());
@@ -16,6 +17,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
 
 app.get('/', (req, res) => {
   res.send('DeshiFreelance API Backend Operational');
