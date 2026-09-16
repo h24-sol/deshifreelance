@@ -39,12 +39,11 @@ const User = mongoose.model('User', userSchema);
 const Task = mongoose.model('Task', taskSchema);
 const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
 
-// --- Auth Middleware Helper ---
+// --- Auth Middleware ---
 const authMiddleware = (req, res, next) => {
   const token = req.headers['x-auth-token'] || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
   if (!token) return res.status(401).json({ message: 'No authentication token provided.' });
   try {
-    // Basic decode assumption for lightweight setups
     req.user = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
     next();
   } catch (err) {
@@ -52,77 +51,104 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// --- API ROUTES ---
+// --- AUTHENTICATION ROUTES ---
 
-// 1. Get Tasks
-app.get('/api/tasks', async (req, res) => {
+// Register User
+app.post('/api/auth/register', async (req, res) => {
   try {
-    const tasks = await Task.find().populate('employer', 'name');
-    res.json(tasks);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const { name, email, password, role } = req.body;
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ message: 'User already exists.' });
 
-// 2. Create Task
-app.post('/api/tasks', authMiddleware, async (req, res) => {
-  try {
-    const task = new Task({ ...req.body, employer: req.user.id });
-    await task.save();
-    res.json(task);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 3. Submit Task Proof
-app.post('/api/tasks/:id/submit', authMiddleware, async (req, res) => {
-  res.json({ message: 'Proof submitted successfully for verification!' });
-});
-
-// 4. NEW: Handle bKash, Nagad, Rocket & Bank Withdrawal Requests
-app.post('/api/withdraw', authMiddleware, async (req, res) => {
-  try {
-    const { method, accountNumber, amountBDT, bankDetails } = req.body;
-    const user = await User.findById(req.user.id);
-
-    const minWithdrawal = 50; // Minimum ৳50 BDT limit
-
-    if (!user) return res.status(404).json({ message: 'User profile not found.' });
-    if (amountBDT < minWithdrawal) {
-      return res.status(400).json({ message: `Minimum withdrawal limit is ৳${minWithdrawal} BDT.` });
-    }
-    if (user.balanceBDT < amountBDT) {
-      return res.status(400).json({ message: 'Insufficient balance to complete withdrawal.' });
-    }
-
-    // Deduct user balance
-    user.balanceBDT -= amountBDT;
+    user = new User({ name, email, password, role: role || 'worker', balanceBDT: 0 });
     await user.save();
 
-    // Log transaction to DB
-    const request = new Withdrawal({
-      user: user._id,
-      method,
-      accountNumber,
-      amountBDT,
-      bankDetails
-    });
-    await request.save();
+    res.json({ message: 'Registration successful! Please log in.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Login User
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email, password });
+    if (!user) return res.status(400).json({ message: 'Invalid email or password.' });
+
+    // Simple JWT-like string payload for quick testing
+    const payload = JSON.stringify({ id: user._id, role: user.role });
+    const token = 'header.' + Buffer.from(payload).toString('base64') + '.signature';
 
     res.json({
-      message: `Successfully submitted request! ৳${amountBDT} BDT will be sent to your ${method} account.`,
-      newBalance: user.balanceBDT
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        balanceBDT: user.balanceBDT
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// --- Serve Static Frontend Files ---
+// --- MICROTASK & WITHDRAWAL ROUTES ---
+
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await Task.find().populate('employer', 'name');
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/tasks', authMiddleware, async (req, res) => {
+  try {
+    const task = new Task({ ...req.body, employer: req.user.id });
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/tasks/:id/submit', authMiddleware, async (req, res) => {
+  res.json({ message: 'Proof submitted successfully for verification!' });
+});
+
+app.post('/api/withdraw', authMiddleware, async (req, res) => {
+  try {
+    const { method, accountNumber, amountBDT, bankDetails } = req.body;
+    const user = await User.findById(req.user.id);
+    const minWithdrawal = 50;
+
+    if (!user) return res.status(404).json({ message: 'User profile not found.' });
+    if (amountBDT < minWithdrawal) return res.status(400).json({ message: `Minimum withdrawal limit is ৳${minWithdrawal} BDT.` });
+    if (user.balanceBDT < amountBDT) return res.status(400).json({ message: 'Insufficient balance to complete withdrawal.' });
+
+    user.balanceBDT -= amountBDT;
+    await user.save();
+
+    const request = new Withdrawal({ user: user._id, method, accountNumber, amountBDT, bankDetails });
+    await request.save();
+
+    res.json({ message: `Submitted! ৳${amountBDT} BDT will be sent to your ${method} account.`, newBalance: user.balanceBDT });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// --- STATIC FILE SERVING & CATCH-ALL ROUTE ---
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(404).json({ message: 'API route not found.' });
+  }
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
